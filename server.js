@@ -4,6 +4,7 @@ const fsPromises = require('fs').promises;
 const AWS = require('aws-sdk');
 const bodyParser = require('body-parser');
 const multer = require('multer')
+const cors = require("cors");
 // const storage = multer.memoryStorage();
 // const upload = multer({ storage: storage });
 const upload = multer();
@@ -14,7 +15,20 @@ const s3 = new AWS.S3({
 });
 const app = express();
 
+const whitelist = ['http://localhost:3000'];
+const corsOptions = {
+    origin: (origin, callback) => {
+        if (whitelist.indexOf(origin) !== -1 || !origin) {
+            callback(null, true);
+        } else {
+            callback(new Error('Not allowed'));
+        }
+    },
+    credentials: true,
+    optionsSuccessStatus: 200
+}
 
+app.use(cors(corsOptions));
 
 app.listen(5000, () => {
   console.log('Server is running on port 5000');
@@ -37,6 +51,7 @@ app.use(function(req, res, next) {
 
 // Upload an image 
 app.post("/post-image", async (req, res) => {
+  console.log("here");
   // Obtain number of images
   let imageCount = 0;
   let data = await fsPromises.readFile("bucket_info.json");
@@ -65,13 +80,13 @@ app.post("/post-image", async (req, res) => {
 
 // Upload text 
 app.post("/post-text", async (req, res) => {
-  // Obtain number of images
+  // Obtain number of text
   let textCount = 0;
   let data = await fsPromises.readFile("bucket_info.json");
   data = JSON.parse(data);
   textCount = data.text;
 
-  // Upload new image
+  // Upload new text
   await s3.putObject({
     Body: JSON.stringify(req.body),
     Bucket: process.env.AWS_TEXT_BUCKET_NAME,
@@ -92,7 +107,7 @@ app.post("/post-text", async (req, res) => {
 });
 
 // Upload audio
-app.post("/post-text", async (req, res) => {
+app.post("/post-audio", async (req, res) => {
   // Obtain number of audio files
   let audioCount = 0;
   let data = await fsPromises.readFile("bucket_info.json");
@@ -117,11 +132,4 @@ app.post("/post-text", async (req, res) => {
   data.audio = audioCount+1;
   await fsPromises.writeFile("bucket_info.json", JSON.stringify(data));
   res.sendStatus(200);
-});
-
-
-app.post("/post-audio", upload.single('awesomeaudio'), (req, res) => {
-	// console.log(req.body);
-	// console.log(req.file);
-	res.status(204);
 });
