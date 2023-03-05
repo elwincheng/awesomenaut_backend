@@ -2,6 +2,11 @@ const express = require('express');
 require("dotenv").config();
 const fsPromises = require('fs').promises;
 const AWS = require('aws-sdk');
+const bodyParser = require('body-parser');
+const multer = require('multer')
+// const storage = multer.memoryStorage();
+// const upload = multer({ storage: storage });
+const upload = multer();
 
 const s3 = new AWS.S3({
   accessKeyId: process.env.AWS_ACCESS_KEY_ID,
@@ -9,11 +14,26 @@ const s3 = new AWS.S3({
 });
 const app = express();
 
+
+
 app.listen(5000, () => {
-  console.log('Server is running on port 3000');
+  console.log('Server is running on port 5000');
 });
 
 app.use(express.json());
+
+app.use(bodyParser.urlencoded({ extended: true })); // For parsing form data
+
+app.use(bodyParser.json()); // For parsing form data
+
+// app.use(upload.array()); 
+// app.use(express.static('public'));
+
+app.use(function(req, res, next) {
+  res.header("Access-Control-Allow-Origin", "http://localhost:3000");
+  res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
+  next();
+});
 
 // Upload an image 
 app.post("/post-image", async (req, res) => {
@@ -97,4 +117,11 @@ app.post("/post-text", async (req, res) => {
   data.audio = audioCount+1;
   await fsPromises.writeFile("bucket_info.json", JSON.stringify(data));
   res.sendStatus(200);
+});
+
+
+app.post("/post-audio", upload.single('awesomeaudio'), (req, res) => {
+	// console.log(req.body);
+	// console.log(req.file);
+	res.status(204);
 });
